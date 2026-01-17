@@ -4,38 +4,50 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>部族の男マインスイーパー</title>
-<style>
-:root { --cell-size: 36px; }
 
-body {
-  margin: 0;
-  font-family: sans-serif;
-  background: url('jungle.jpg') center/cover no-repeat;
-  background-attachment: fixed;
-  color: #fff;
+<style>
+:root{--cell-size:36px;}
+
+body{
+  margin:0;
+  font-family:sans-serif;
+  background:url("jungle.jpg") center/cover no-repeat fixed;
+  color:#fff;
 }
 
-#container { display: flex; min-height: 100vh; }
-@media (min-width:768px){#container{flex-direction:row;}}
-@media (max-width:767px){#container{flex-direction:column;align-items:center;} :root{--cell-size:min(9vw,40px);} }
+#container{display:flex;min-height:100vh;}
+@media(min-width:768px){#container{flex-direction:row;}}
+@media(max-width:767px){
+  #container{flex-direction:column;align-items:center;}
+  :root{--cell-size:min(9vw,40px);}
+}
 
-#game { padding:10px; background: rgba(0,0,0,0.3); border-radius:6px;}
+#game{
+  padding:10px;
+  background:rgba(0,0,0,.3);
+  border-radius:6px;
+  position:relative;
+  transition:filter .5s;
+}
+
+#game.last-dark{
+  filter:brightness(0.7);
+}
+
 table{border-collapse:collapse;}
 td{
-  width: var(--cell-size);
-  height: var(--cell-size);
+  width:var(--cell-size);
+  height:var(--cell-size);
   border:1px solid #1b3a2a;
   background:#2e6b4f;
   text-align:center;
   font-weight:bold;
   cursor:pointer;
   font-size:calc(var(--cell-size)*0.5);
-  transition: background 0.15s, transform 0.15s;
 }
 td:hover{background:#3f8f6b;}
-td.open{background:#cfd8dc;cursor:default;transform:scale(0.95);}
+td.open{background:#cfd8dc;cursor:default;}
 
-/* 数字の色 */
 .num1{color:#1976d2;}
 .num2{color:#2e7d32;}
 .num3{color:#d32f2f;}
@@ -45,15 +57,21 @@ td.open{background:#cfd8dc;cursor:default;transform:scale(0.95);}
 .num7{color:#424242;}
 .num8{color:#000;}
 
-/* 旗 */
-td.flag{background:#1b3a2a;color:#00ff00;}
+td.flag{background:#1b3a2a;color:#0f0;}
+td.enemy{
+  background:black url("tribe.jpeg") center/cover no-repeat;
+  animation:pop .4s ease;
+}
 
-/* 部族の男 */
-td.enemy{background:black url("tribe.jpeg") center/cover no-repeat; animation:pop 0.4s ease;}
+@keyframes pop{
+  0%{transform:scale(1);}
+  50%{transform:scale(1.2);}
+  100%{transform:scale(1);}
+}
 
-/* サイド */
+/* SIDE */
 #side{
-  background: rgba(8,20,15,0.7);
+  background:rgba(8,20,15,.7);
   padding:10px;
   text-align:center;
 }
@@ -62,16 +80,75 @@ td.enemy{background:black url("tribe.jpeg") center/cover no-repeat; animation:po
 
 #explorer{
   width:min(220px,80vw);
-  transition: filter 0.4s, transform 0.4s;
+  transition:.4s;
 }
-#explorer.captured{filter:grayscale(40%) brightness(0.8);transform:scale(0.95);}
-#status{margin-top:8px;font-size:18px;font-weight:bold;}
-#status.clear{color:gold;text-shadow:0 0 8px gold;}
-button{margin-top:8px;padding:8px 16px;font-size:16px;background:#2e6b4f;border:none;color:white;cursor:pointer;}
 
-@keyframes pop{0%{transform:scale(1);}50%{transform:scale(1.2);}100%{transform:scale(1);}}
+#explorer.perfect{
+  width:min(320px,90vw);
+  border:6px solid gold;
+  border-radius:14px;
+  box-shadow:0 0 30px gold;
+}
+
+#explorer.captured{
+  filter:grayscale(40%) brightness(.8);
+}
+
+#status{
+  margin-top:8px;
+  font-size:18px;
+  font-weight:bold;
+}
+
+#status.clear{
+  color:gold;
+  text-shadow:0 0 8px gold;
+}
+
+button{
+  margin-top:8px;
+  padding:8px 16px;
+  font-size:16px;
+  background:#2e6b4f;
+  border:none;
+  color:white;
+  cursor:pointer;
+}
+
+/* 盤面メッセージ */
+#boardMessage{
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  font-size:34px;
+  font-weight:bold;
+  color:gold;
+  background:rgba(0,0,0,.45);
+  text-shadow:0 0 10px black,0 0 18px gold;
+  pointer-events:none;
+}
+
+/* 金色フラッシュ */
+#goldFlash{
+  position:absolute;
+  inset:0;
+  background:gold;
+  opacity:0;
+  animation:flash .8s ease;
+  pointer-events:none;
+}
+
+@keyframes flash{
+  0%{opacity:0;}
+  30%{opacity:.6;}
+  100%{opacity:0;}
+}
 </style>
 </head>
+
 <body>
 <div id="container">
   <div id="game"></div>
@@ -83,60 +160,76 @@ button{margin-top:8px;padding:8px 16px;font-size:16px;background:#2e6b4f;border:
   </div>
 </div>
 
-<!-- 効果音 -->
+<!-- AUDIO -->
 <audio id="seOpen" src="open.mp3"></audio>
 <audio id="seFlag" src="flag.mp3"></audio>
 <audio id="seDeath" src="death.mp3"></audio>
 <audio id="seClear" src="clear.mp3"></audio>
+<audio id="sePerfect" src="perfect.mp3"></audio>
+
 <audio id="bgm" src="bgm.mp3" loop></audio>
+<audio id="lastBgm" src="last.mp3" loop></audio>
 
 <script>
 const ROWS=9,COLS=9,ENEMIES=10;
 let board=[],opened=[],flags=[],gameOver=false;
+let usedFlag=false;
+let lastMode=false;
 
-const explorerImg=document.getElementById("explorer");
+const game=document.getElementById("game");
+const explorer=document.getElementById("explorer");
+const status=document.getElementById("status");
+
+const bgm=document.getElementById("bgm");
+const lastBgm=document.getElementById("lastBgm");
+
 const seOpen=document.getElementById("seOpen");
 const seFlag=document.getElementById("seFlag");
 const seDeath=document.getElementById("seDeath");
 const seClear=document.getElementById("seClear");
-const bgm=document.getElementById("bgm");
-const bgmToggleBtn=document.getElementById("bgmToggle");
+const sePerfect=document.getElementById("sePerfect");
 
-function play(se){se.currentTime=0; se.play().catch(()=>{});}
+function play(se){se.currentTime=0;se.play().catch(()=>{});}
+
 document.getElementById("restart").onclick=init;
 
-// BGM ON/OFF ボタン
-bgmToggleBtn.onclick = () => {
-  if(bgm.paused){
+document.getElementById("bgmToggle").onclick=()=>{
+  if(bgm.paused && lastBgm.paused){
     bgm.play().catch(()=>{});
-    bgmToggleBtn.textContent = "BGM OFF";
-  } else {
-    bgm.pause();
-    bgmToggleBtn.textContent = "BGM ON";
+    bgmToggle.textContent="BGM OFF";
+  }else{
+    bgm.pause();lastBgm.pause();
+    bgmToggle.textContent="BGM ON";
   }
 };
 
-// 初回タップ・クリックでスマホ対応
 function startBGM(){
   if(bgm.paused){
     bgm.play().catch(()=>{});
-    bgmToggleBtn.textContent="BGM OFF";
+    bgmToggle.textContent="BGM OFF";
   }
 }
-document.body.addEventListener("click", startBGM, {once:true});
-document.body.addEventListener("touchstart", startBGM, {once:true});
+document.body.addEventListener("click",startBGM,{once:true});
+document.body.addEventListener("touchstart",startBGM,{once:true});
 
 function init(){
   board=Array.from({length:ROWS},()=>Array(COLS).fill(0));
   opened=Array.from({length:ROWS},()=>Array(COLS).fill(false));
   flags=Array.from({length:ROWS},()=>Array(COLS).fill(false));
   gameOver=false;
+  usedFlag=false;
+  lastMode=false;
 
-  explorerImg.src="explorer.jpeg";
-  explorerImg.classList.remove("captured");
-  const st=document.getElementById("status");
-  st.classList.remove("clear");
-  st.textContent="探検開始！";
+  bgm.pause();lastBgm.pause();
+  game.classList.remove("last-dark");
+
+  explorer.src="explorer.jpeg";
+  explorer.className="";
+  status.textContent="探検開始！";
+  status.className="";
+
+  const msg=document.getElementById("boardMessage");
+  if(msg)msg.remove();
 
   let placed=0;
   while(placed<ENEMIES){
@@ -157,7 +250,6 @@ function init(){
 }
 
 function draw(){
-  const game=document.getElementById("game");
   game.innerHTML="";
   const table=document.createElement("table");
 
@@ -165,28 +257,35 @@ function draw(){
     const tr=document.createElement("tr");
     for(let c=0;c<COLS;c++){
       const td=document.createElement("td");
+
       if(opened[r][c]){
         td.classList.add("open");
         if(board[r][c]==="E")td.classList.add("enemy");
-        else if(board[r][c]>0){td.textContent=board[r][c]; td.classList.add("num"+board[r][c]);}
+        else if(board[r][c]>0){
+          td.textContent=board[r][c];
+          td.classList.add("num"+board[r][c]);
+        }
       }else if(flags[r][c]){
         td.classList.add("flag");
         td.textContent="🚩";
       }
 
-      td.onclick=()=>{if(!gameOver&&!flags[r][c]){openCell(r,c); draw();}};
-      td.oncontextmenu=e=>{e.preventDefault(); if(!opened[r][c]&&!gameOver){flags[r][c]=!flags[r][c];play(seFlag);draw();}};
+      td.onclick=()=>{
+        if(!gameOver&&!flags[r][c]){
+          openCell(r,c);
+          draw();
+        }
+      };
 
-      let pressTimer;
-      td.addEventListener("touchstart",e=>{
-        if(opened[r][c]||gameOver)return;
-        pressTimer=setTimeout(()=>{
+      td.oncontextmenu=e=>{
+        e.preventDefault();
+        if(!opened[r][c]&&!gameOver){
           flags[r][c]=!flags[r][c];
+          usedFlag=true;
           play(seFlag);
           draw();
-        },600);
-      });
-      td.addEventListener("touchend",e=>{clearTimeout(pressTimer);});
+        }
+      };
 
       tr.appendChild(td);
     }
@@ -203,33 +302,67 @@ function openCell(r,c){
   if(board[r][c]==="E"){
     gameOver=true;
     play(seDeath);
-    explorerImg.src="explorer_captured.jpeg";
-    explorerImg.classList.add("captured");
-    document.getElementById("status").textContent="捕まってしまった…";
-    for(let i=0;i<ROWS;i++)for(let j=0;j<COLS;j++)if(board[i][j]==="E")opened[i][j]=true;
-    draw();
+    bgm.pause();lastBgm.pause();
+    explorer.src="explorer_captured.jpeg";
+    explorer.classList.add("captured");
+    status.textContent="捕まってしまった…";
+    for(let i=0;i<ROWS;i++)for(let j=0;j<COLS;j++)
+      if(board[i][j]==="E")opened[i][j]=true;
     return;
   }
 
-  if(board[r][c]===0)for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
-    let nr=r+dr,nc=c+dc;
-    if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS)openCell(nr,nc);
-  }
+  if(board[r][c]===0)
+    for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+      let nr=r+dr,nc=c+dc;
+      if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS)openCell(nr,nc);
+    }
 
+  checkLast();
   checkClear();
 }
 
-function checkClear(){
-  let safe=ROWS*COLS-ENEMIES,cnt=0;
+function checkLast(){
+  let safe=ROWS*COLS-ENEMIES,count=0;
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)
-    if(opened[r][c]&&board[r][c]!=="E")cnt++;
-  if(cnt===safe){
+    if(opened[r][c]&&board[r][c]!=="E")count++;
+
+  if(safe-count===1 && !usedFlag && !lastMode){
+    lastMode=true;
+    game.classList.add("last-dark");
+    bgm.pause();
+    lastBgm.play().catch(()=>{});
+  }
+}
+
+function checkClear(){
+  let safe=ROWS*COLS-ENEMIES,count=0;
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)
+    if(opened[r][c]&&board[r][c]!=="E")count++;
+
+  if(count===safe){
     gameOver=true;
-    const st=document.getElementById("status");
-    st.textContent="CONGRATULATIONS!!";
-    st.classList.add("clear");
-    explorerImg.src="explorer_clear.jpeg";
-    play(seClear);
+    bgm.pause();lastBgm.pause();
+    status.classList.add("clear");
+
+    if(!usedFlag){
+      play(sePerfect);
+      status.textContent="PERFECT CLEAR!!";
+      explorer.src="explorer_perfect.jpeg";
+      explorer.classList.add("perfect");
+
+      const msg=document.createElement("div");
+      msg.id="boardMessage";
+      msg.innerHTML="PERFECT CLEAR!<br>CONGRATULATIONS!!";
+      game.appendChild(msg);
+
+      const flash=document.createElement("div");
+      flash.id="goldFlash";
+      game.appendChild(flash);
+    }else{
+      play(seClear);
+      status.textContent="CONGRATULATIONS!!";
+      explorer.src="explorer_clear.jpeg";
+    }
   }
 }
 
