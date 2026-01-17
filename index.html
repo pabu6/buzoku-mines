@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>部族の男マインスイーパー</title>
+<style>
+:root { --cell-size: 36px; }
+
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background: url('jungle.jpg') center/cover no-repeat;
+  background-attachment: fixed;
+  color: #fff;
+}
+
+#container { display: flex; min-height: 100vh; }
+@media (min-width:768px){#container{flex-direction:row;}}
+@media (max-width:767px){#container{flex-direction:column;align-items:center;} :root{--cell-size:min(9vw,40px);} }
+
+#game { padding:10px; background: rgba(0,0,0,0.3); border-radius:6px;}
+table{border-collapse:collapse;}
+td{
+  width: var(--cell-size);
+  height: var(--cell-size);
+  border:1px solid #1b3a2a;
+  background:#2e6b4f;
+  text-align:center;
+  font-weight:bold;
+  cursor:pointer;
+  font-size:calc(var(--cell-size)*0.5);
+  transition: background 0.15s, transform 0.15s;
+}
+td:hover{background:#3f8f6b;}
+td.open{background:#cfd8dc;cursor:default;transform:scale(0.95);}
+
+/* 数字の色 */
+.num1{color:#1976d2;}
+.num2{color:#2e7d32;}
+.num3{color:#d32f2f;}
+.num4{color:#7b1fa2;}
+.num5{color:#5d4037;}
+.num6{color:#00838f;}
+.num7{color:#424242;}
+.num8{color:#000;}
+
+/* 旗 */
+td.flag{background:#1b3a2a;color:#00ff00;}
+
+/* 部族の男 */
+td.enemy{background:black url("tribe.jpeg") center/cover no-repeat; animation:pop 0.4s ease;}
+
+/* サイド */
+#side{
+  background: rgba(8,20,15,0.7);
+  padding:10px;
+  text-align:center;
+}
+@media(min-width:768px){#side{width:260px;}}
+@media(max-width:767px){#side{width:100%;}}
+
+#explorer{
+  width:min(220px,80vw);
+  transition: filter 0.4s, transform 0.4s;
+}
+#explorer.captured{filter:grayscale(40%) brightness(0.8);transform:scale(0.95);}
+#status{margin-top:8px;font-size:18px;font-weight:bold;}
+#status.clear{color:gold;text-shadow:0 0 8px gold;}
+button{margin-top:8px;padding:8px 16px;font-size:16px;background:#2e6b4f;border:none;color:white;cursor:pointer;}
+
+@keyframes pop{0%{transform:scale(1);}50%{transform:scale(1.2);}100%{transform:scale(1);}}
+</style>
+</head>
+<body>
+<div id="container">
+  <div id="game"></div>
+  <div id="side">
+    <img id="explorer" src="explorer.jpeg">
+    <div id="status">探検開始！</div>
+    <button id="restart">RESTART</button>
+    <button id="bgmToggle">BGM ON</button>
+  </div>
+</div>
+
+<!-- 効果音 -->
+<audio id="seOpen" src="open.mp3"></audio>
+<audio id="seFlag" src="flag.mp3"></audio>
+<audio id="seDeath" src="death.mp3"></audio>
+<audio id="seClear" src="clear.mp3"></audio>
+<audio id="bgm" src="bgm.mp3" loop></audio>
+
+<script>
+const ROWS=9,COLS=9,ENEMIES=10;
+let board=[],opened=[],flags=[],gameOver=false;
+
+const explorerImg=document.getElementById("explorer");
+const seOpen=document.getElementById("seOpen");
+const seFlag=document.getElementById("seFlag");
+const seDeath=document.getElementById("seDeath");
+const seClear=document.getElementById("seClear");
+const bgm=document.getElementById("bgm");
+const bgmToggleBtn=document.getElementById("bgmToggle");
+
+function play(se){se.currentTime=0; se.play().catch(()=>{});}
+document.getElementById("restart").onclick=init;
+
+// BGM ON/OFF ボタン
+bgmToggleBtn.onclick = () => {
+  if(bgm.paused){
+    bgm.play().catch(()=>{});
+    bgmToggleBtn.textContent = "BGM OFF";
+  } else {
+    bgm.pause();
+    bgmToggleBtn.textContent = "BGM ON";
+  }
+};
+
+// 初回タップ・クリックでスマホ対応
+function startBGM(){
+  if(bgm.paused){
+    bgm.play().catch(()=>{});
+    bgmToggleBtn.textContent="BGM OFF";
+  }
+}
+document.body.addEventListener("click", startBGM, {once:true});
+document.body.addEventListener("touchstart", startBGM, {once:true});
+
+function init(){
+  board=Array.from({length:ROWS},()=>Array(COLS).fill(0));
+  opened=Array.from({length:ROWS},()=>Array(COLS).fill(false));
+  flags=Array.from({length:ROWS},()=>Array(COLS).fill(false));
+  gameOver=false;
+
+  explorerImg.src="explorer.jpeg";
+  explorerImg.classList.remove("captured");
+  const st=document.getElementById("status");
+  st.classList.remove("clear");
+  st.textContent="探検開始！";
+
+  let placed=0;
+  while(placed<ENEMIES){
+    let r=Math.random()*ROWS|0,c=Math.random()*COLS|0;
+    if(board[r][c]!=="E"){board[r][c]="E";placed++;}
+  }
+
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    if(board[r][c]==="E")continue;
+    let n=0;
+    for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+      let nr=r+dr,nc=c+dc;
+      if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS&&board[nr][nc]==="E")n++;
+    }
+    board[r][c]=n;
+  }
+  draw();
+}
+
+function draw(){
+  const game=document.getElementById("game");
+  game.innerHTML="";
+  const table=document.createElement("table");
+
+  for(let r=0;r<ROWS;r++){
+    const tr=document.createElement("tr");
+    for(let c=0;c<COLS;c++){
+      const td=document.createElement("td");
+      if(opened[r][c]){
+        td.classList.add("open");
+        if(board[r][c]==="E")td.classList.add("enemy");
+        else if(board[r][c]>0){td.textContent=board[r][c]; td.classList.add("num"+board[r][c]);}
+      }else if(flags[r][c]){
+        td.classList.add("flag");
+        td.textContent="🚩";
+      }
+
+      td.onclick=()=>{if(!gameOver&&!flags[r][c]){openCell(r,c); draw();}};
+      td.oncontextmenu=e=>{e.preventDefault(); if(!opened[r][c]&&!gameOver){flags[r][c]=!flags[r][c];play(seFlag);draw();}};
+
+      let pressTimer;
+      td.addEventListener("touchstart",e=>{
+        if(opened[r][c]||gameOver)return;
+        pressTimer=setTimeout(()=>{
+          flags[r][c]=!flags[r][c];
+          play(seFlag);
+          draw();
+        },600);
+      });
+      td.addEventListener("touchend",e=>{clearTimeout(pressTimer);});
+
+      tr.appendChild(td);
+    }
+    table.appendChild(tr);
+  }
+  game.appendChild(table);
+}
+
+function openCell(r,c){
+  if(opened[r][c])return;
+  opened[r][c]=true;
+  play(seOpen);
+
+  if(board[r][c]==="E"){
+    gameOver=true;
+    play(seDeath);
+    explorerImg.src="explorer_captured.jpeg";
+    explorerImg.classList.add("captured");
+    document.getElementById("status").textContent="捕まってしまった…";
+    for(let i=0;i<ROWS;i++)for(let j=0;j<COLS;j++)if(board[i][j]==="E")opened[i][j]=true;
+    draw();
+    return;
+  }
+
+  if(board[r][c]===0)for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+    let nr=r+dr,nc=c+dc;
+    if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS)openCell(nr,nc);
+  }
+
+  checkClear();
+}
+
+function checkClear(){
+  let safe=ROWS*COLS-ENEMIES,cnt=0;
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)
+    if(opened[r][c]&&board[r][c]!=="E")cnt++;
+  if(cnt===safe){
+    gameOver=true;
+    const st=document.getElementById("status");
+    st.textContent="CONGRATULATIONS!!";
+    st.classList.add("clear");
+    explorerImg.src="explorer_clear.jpeg";
+    play(seClear);
+  }
+}
+
+init();
+</script>
+</body>
+</html>
