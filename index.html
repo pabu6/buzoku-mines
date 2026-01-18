@@ -20,15 +20,22 @@ body{
   min-height:100vh;
 }
 
-/* PC */
+/* ===== PC ===== */
 @media(min-width:768px){
-  #container{justify-content:center;align-items:center;gap:32px;}
+  #container{
+    justify-content:center;
+    align-items:center;
+    gap:32px;
+  }
   :root{--cell-size:48px;}
 }
 
-/* Mobile */
+/* ===== Mobile ===== */
 @media(max-width:767px){
-  #container{flex-direction:column;align-items:center;}
+  #container{
+    flex-direction:column;
+    align-items:center;
+  }
   :root{--cell-size:min(9vw,40px);}
 }
 
@@ -76,7 +83,7 @@ td.enemy{
   100%{transform:scale(1);}
 }
 
-/* SIDE */
+/* ===== SIDE ===== */
 #side{
   background:rgba(8,20,15,.7);
   padding:12px;
@@ -87,10 +94,10 @@ td.enemy{
 @media(max-width:767px){#side{width:100%;}}
 
 #explorer{
-  width:min(260px,80vw);
+  width:min(320px,90vw);
   transition:.4s;
+  cursor:default;
 }
-@media(min-width:768px){#explorer{width:320px;}}
 
 #explorer.perfect{
   border:6px solid gold;
@@ -98,7 +105,10 @@ td.enemy{
   box-shadow:0 0 30px gold;
   cursor:pointer;
 }
-#explorer.captured{filter:grayscale(40%) brightness(.8);}
+
+#explorer.captured{
+  filter:grayscale(40%) brightness(.8);
+}
 
 #status{
   margin-top:8px;
@@ -120,7 +130,7 @@ button{
   cursor:pointer;
 }
 
-/* PERFECT 拡大 */
+/* ===== PERFECT 拡大 ===== */
 #zoomOverlay{
   position:fixed;
   inset:0;
@@ -138,16 +148,33 @@ button{
   box-shadow:0 0 40px gold;
 }
 
+/* ===== Board Message ===== */
 #boardMessage{
   position:absolute;
   inset:0;
   display:flex;
   justify-content:center;
   align-items:center;
+  text-align:center;
   font-size:34px;
   font-weight:bold;
   color:gold;
   background:rgba(0,0,0,.45);
+  text-shadow:0 0 10px black,0 0 18px gold;
+  pointer-events:none;
+}
+
+#goldFlash{
+  position:absolute;
+  inset:0;
+  background:gold;
+  opacity:0;
+  animation:flash .8s ease;
+}
+@keyframes flash{
+  0%{opacity:0;}
+  30%{opacity:.6;}
+  100%{opacity:0;}
 }
 </style>
 </head>
@@ -159,12 +186,13 @@ button{
     <img id="explorer" src="explorer.jpeg">
     <div id="status">探検開始！</div>
     <button id="restart">RESTART</button>
-    <button id="bgmToggle">BGM ON</button>
+    <button id="bgmToggle">BGM OFF</button>
   </div>
 </div>
 
 <div id="zoomOverlay"><img id="zoomImage"></div>
 
+<!-- AUDIO -->
 <audio id="seOpen" src="open.mp3"></audio>
 <audio id="seFlag" src="flag.mp3"></audio>
 <audio id="seDeath" src="death.mp3"></audio>
@@ -177,16 +205,19 @@ button{
 const ROWS=9,COLS=9,ENEMIES=10;
 let board=[],opened=[],flags=[],gameOver=false;
 let usedFlag=false,lastMode=false;
+let bgmEnabled=true;
 
 const game=document.getElementById("game");
 const explorer=document.getElementById("explorer");
 const status=document.getElementById("status");
 const bgmToggle=document.getElementById("bgmToggle");
+
 const zoomOverlay=document.getElementById("zoomOverlay");
 const zoomImage=document.getElementById("zoomImage");
 
 const bgm=document.getElementById("bgm");
 const lastBgm=document.getElementById("lastBgm");
+
 const seOpen=document.getElementById("seOpen");
 const seFlag=document.getElementById("seFlag");
 const seDeath=document.getElementById("seDeath");
@@ -195,12 +226,29 @@ const sePerfect=document.getElementById("sePerfect");
 
 function play(se){se.currentTime=0;se.play().catch(()=>{});}
 
-document.getElementById("restart").onclick=init;
+function playBGM(){
+  if(!bgmEnabled)return;
+  bgm.play().catch(()=>{});
+  bgmToggle.textContent="BGM OFF";
+}
+function stopAllBGM(){
+  bgm.pause();lastBgm.pause();
+}
 
 bgmToggle.onclick=()=>{
-  if(bgm.paused && lastBgm.paused){bgm.play();bgmToggle.textContent="BGM OFF";}
-  else{bgm.pause();lastBgm.pause();bgmToggle.textContent="BGM ON";}
+  if(bgmEnabled){
+    bgmEnabled=false;
+    stopAllBGM();
+    bgmToggle.textContent="BGM ON";
+  }else{
+    bgmEnabled=true;
+    playBGM();
+  }
 };
+
+window.addEventListener("load",playBGM);
+document.body.addEventListener("click",playBGM,{once:true});
+document.body.addEventListener("touchstart",playBGM,{once:true});
 
 explorer.onclick=()=>{
   if(!explorer.classList.contains("perfect"))return;
@@ -209,14 +257,26 @@ explorer.onclick=()=>{
 };
 zoomOverlay.onclick=()=>zoomOverlay.style.display="none";
 
+document.getElementById("restart").onclick=init;
+
 function init(){
   board=Array.from({length:ROWS},()=>Array(COLS).fill(0));
   opened=Array.from({length:ROWS},()=>Array(COLS).fill(false));
   flags=Array.from({length:ROWS},()=>Array(COLS).fill(false));
   gameOver=false;usedFlag=false;lastMode=false;
-  explorer.src="explorer.jpeg";explorer.className="";
-  status.textContent="探検開始！";status.className="";
+
+  stopAllBGM();
+  if(bgmEnabled)playBGM();
+
+  game.classList.remove("last-dark");
+  explorer.src="explorer.jpeg";
+  explorer.className="";
+  status.textContent="探検開始！";
+  status.className="";
   zoomOverlay.style.display="none";
+
+  const old=document.getElementById("boardMessage");
+  if(old)old.remove();
 
   let placed=0;
   while(placed<ENEMIES){
@@ -239,7 +299,6 @@ function init(){
 function draw(){
   game.innerHTML="";
   const table=document.createElement("table");
-
   for(let r=0;r<ROWS;r++){
     const tr=document.createElement("tr");
     for(let c=0;c<COLS;c++){
@@ -248,42 +307,31 @@ function draw(){
       if(opened[r][c]){
         td.classList.add("open");
         if(board[r][c]==="E")td.classList.add("enemy");
-        else if(board[r][c]>0){td.textContent=board[r][c];td.classList.add("num"+board[r][c]);}
+        else if(board[r][c]>0){
+          td.textContent=board[r][c];
+          td.classList.add("num"+board[r][c]);
+        }
       }else if(flags[r][c]){
         td.classList.add("flag");
         td.textContent="🚩";
       }
 
-      // 通常タップ
       td.onclick=()=>{if(!gameOver&&!flags[r][c]){openCell(r,c);draw();}};
-
-      // PC右クリック
       td.oncontextmenu=e=>{
         e.preventDefault();
-        toggleFlag(r,c);
+        if(!opened[r][c]&&!gameOver){
+          flags[r][c]=!flags[r][c];
+          usedFlag=true;
+          play(seFlag);
+          draw();
+        }
       };
-
-      // スマホ長押し
-      let pressTimer;
-      td.ontouchstart=e=>{
-        pressTimer=setTimeout(()=>toggleFlag(r,c),500);
-      };
-      td.ontouchend=()=>clearTimeout(pressTimer);
-      td.ontouchmove=()=>clearTimeout(pressTimer);
 
       tr.appendChild(td);
     }
     table.appendChild(tr);
   }
   game.appendChild(table);
-}
-
-function toggleFlag(r,c){
-  if(opened[r][c]||gameOver)return;
-  flags[r][c]=!flags[r][c];
-  usedFlag=true;
-  play(seFlag);
-  draw();
 }
 
 function openCell(r,c){
@@ -294,6 +342,7 @@ function openCell(r,c){
   if(board[r][c]==="E"){
     gameOver=true;
     play(seDeath);
+    stopAllBGM();
     explorer.src="explorer_captured.jpeg";
     explorer.classList.add("captured");
     status.textContent="捕まってしまった…";
@@ -308,7 +357,21 @@ function openCell(r,c){
       if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS)openCell(nr,nc);
     }
 
+  checkLast();
   checkClear();
+}
+
+function checkLast(){
+  let safe=ROWS*COLS-ENEMIES,count=0;
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)
+    if(opened[r][c]&&board[r][c]!=="E")count++;
+
+  if(safe-count===1 && !usedFlag && !lastMode){
+    lastMode=true;
+    game.classList.add("last-dark");
+    stopAllBGM();
+    lastBgm.play().catch(()=>{});
+  }
 }
 
 function checkClear(){
@@ -318,6 +381,7 @@ function checkClear(){
 
   if(count===safe){
     gameOver=true;
+    stopAllBGM();
     status.classList.add("clear");
 
     if(!usedFlag){
@@ -325,6 +389,15 @@ function checkClear(){
       status.textContent="PERFECT CLEAR!!";
       explorer.src="explorer_perfect.jpeg";
       explorer.classList.add("perfect");
+
+      const msg=document.createElement("div");
+      msg.id="boardMessage";
+      msg.innerHTML="PERFECT CLEAR!<br>CONGRATULATIONS!!";
+      game.appendChild(msg);
+
+      const flash=document.createElement("div");
+      flash.id="goldFlash";
+      game.appendChild(flash);
     }else{
       play(seClear);
       status.textContent="CONGRATULATIONS!!";
