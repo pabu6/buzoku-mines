@@ -232,7 +232,7 @@ function playBGM(){
   bgmToggle.textContent="BGM OFF";
 }
 function stopAllBGM(){
-  bgm.pause();lastBgm.pause();
+  bgm.pause(); lastBgm.pause();
 }
 
 bgmToggle.onclick=()=>{
@@ -263,10 +263,10 @@ function init(){
   board=Array.from({length:ROWS},()=>Array(COLS).fill(0));
   opened=Array.from({length:ROWS},()=>Array(COLS).fill(false));
   flags=Array.from({length:ROWS},()=>Array(COLS).fill(false));
-  gameOver=false;usedFlag=false;lastMode=false;
+  gameOver=false; usedFlag=false; lastMode=false;
 
   stopAllBGM();
-  if(bgmEnabled)playBGM();
+  if(bgmEnabled) playBGM();
 
   game.classList.remove("last-dark");
   explorer.src="explorer.jpeg";
@@ -276,12 +276,12 @@ function init(){
   zoomOverlay.style.display="none";
 
   const old=document.getElementById("boardMessage");
-  if(old)old.remove();
+  if(old) old.remove();
 
   let placed=0;
   while(placed<ENEMIES){
-    let r=Math.random()*ROWS|0,c=Math.random()*COLS|0;
-    if(board[r][c]!=="E"){board[r][c]="E";placed++;}
+    let r=Math.random()*ROWS|0, c=Math.random()*COLS|0;
+    if(board[r][c]!=="E"){ board[r][c]="E"; placed++; }
   }
 
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
@@ -299,6 +299,7 @@ function init(){
 function draw(){
   game.innerHTML="";
   const table=document.createElement("table");
+
   for(let r=0;r<ROWS;r++){
     const tr=document.createElement("tr");
     for(let c=0;c<COLS;c++){
@@ -306,7 +307,7 @@ function draw(){
 
       if(opened[r][c]){
         td.classList.add("open");
-        if(board[r][c]==="E")td.classList.add("enemy");
+        if(board[r][c]==="E") td.classList.add("enemy");
         else if(board[r][c]>0){
           td.textContent=board[r][c];
           td.classList.add("num"+board[r][c]);
@@ -316,7 +317,33 @@ function draw(){
         td.textContent="🚩";
       }
 
-      td.onclick=()=>{if(!gameOver&&!flags[r][c]){openCell(r,c);draw();}};
+      // ===== スマホ長押しで旗 =====
+      let pressTimer=null;
+      let longPress=false;
+
+      td.addEventListener("touchstart", e=>{
+        if(gameOver||opened[r][c]) return;
+        longPress=false;
+        pressTimer=setTimeout(()=>{
+          flags[r][c]=!flags[r][c];
+          usedFlag=true;
+          longPress=true;
+          play(seFlag);
+          draw();
+        },500);
+      });
+
+      td.addEventListener("touchend", ()=>clearTimeout(pressTimer));
+      td.addEventListener("touchmove", ()=>clearTimeout(pressTimer));
+
+      td.onclick=()=>{
+        if(longPress) return;
+        if(!gameOver && !flags[r][c]){
+          openCell(r,c);
+          draw();
+        }
+      };
+
       td.oncontextmenu=e=>{
         e.preventDefault();
         if(!opened[r][c]&&!gameOver){
@@ -347,14 +374,14 @@ function openCell(r,c){
     explorer.classList.add("captured");
     status.textContent="捕まってしまった…";
     for(let i=0;i<ROWS;i++)for(let j=0;j<COLS;j++)
-      if(board[i][j]==="E")opened[i][j]=true;
+      if(board[i][j]==="E") opened[i][j]=true;
     return;
   }
 
   if(board[r][c]===0)
     for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
       let nr=r+dr,nc=c+dc;
-      if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS)openCell(nr,nc);
+      if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS) openCell(nr,nc);
     }
 
   checkLast();
@@ -362,9 +389,9 @@ function openCell(r,c){
 }
 
 function checkLast(){
-  let safe=ROWS*COLS-ENEMIES,count=0;
+  let safe=ROWS*COLS-ENEMIES, count=0;
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)
-    if(opened[r][c]&&board[r][c]!=="E")count++;
+    if(opened[r][c]&&board[r][c]!=="E") count++;
 
   if(safe-count===1 && !usedFlag && !lastMode){
     lastMode=true;
@@ -375,9 +402,9 @@ function checkLast(){
 }
 
 function checkClear(){
-  let safe=ROWS*COLS-ENEMIES,count=0;
+  let safe=ROWS*COLS-ENEMIES, count=0;
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)
-    if(opened[r][c]&&board[r][c]!=="E")count++;
+    if(opened[r][c]&&board[r][c]!=="E") count++;
 
   if(count===safe){
     gameOver=true;
