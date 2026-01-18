@@ -15,10 +15,28 @@ body{
   color:#fff;
 }
 
-#container{display:flex;min-height:100vh;}
-@media(min-width:768px){#container{flex-direction:row;}}
+#container{
+  display:flex;
+  min-height:100vh;
+}
+
+/* ===== PC ===== */
+@media(min-width:768px){
+  #container{
+    flex-direction:row;
+    justify-content:center;
+    align-items:center;
+    gap:32px;
+  }
+  :root{--cell-size:48px;}
+}
+
+/* ===== Mobile ===== */
 @media(max-width:767px){
-  #container{flex-direction:column;align-items:center;}
+  #container{
+    flex-direction:column;
+    align-items:center;
+  }
   :root{--cell-size:min(9vw,40px);}
 }
 
@@ -30,9 +48,7 @@ body{
   transition:filter .5s;
 }
 
-#game.last-dark{
-  filter:brightness(0.7);
-}
+#game.last-dark{filter:brightness(0.7);}
 
 table{border-collapse:collapse;}
 td{
@@ -69,22 +85,24 @@ td.enemy{
   100%{transform:scale(1);}
 }
 
-/* SIDE */
+/* ===== SIDE ===== */
 #side{
   background:rgba(8,20,15,.7);
-  padding:10px;
+  padding:12px;
   text-align:center;
+  border-radius:8px;
 }
-@media(min-width:768px){#side{width:260px;}}
+
+@media(min-width:768px){#side{width:300px;}}
 @media(max-width:767px){#side{width:100%;}}
 
 #explorer{
-  width:min(220px,80vw);
+  width:min(260px,80vw);
   transition:.4s;
 }
+@media(min-width:768px){#explorer{width:320px;}}
 
 #explorer.perfect{
-  width:min(320px,90vw);
   border:6px solid gold;
   border-radius:14px;
   box-shadow:0 0 30px gold;
@@ -115,7 +133,7 @@ button{
   cursor:pointer;
 }
 
-/* 盤面メッセージ */
+/* ===== Board Message ===== */
 #boardMessage{
   position:absolute;
   inset:0;
@@ -131,7 +149,6 @@ button{
   pointer-events:none;
 }
 
-/* 金色フラッシュ */
 #goldFlash{
   position:absolute;
   inset:0;
@@ -166,19 +183,18 @@ button{
 <audio id="seDeath" src="death.mp3"></audio>
 <audio id="seClear" src="clear.mp3"></audio>
 <audio id="sePerfect" src="perfect.mp3"></audio>
-
 <audio id="bgm" src="bgm.mp3" loop></audio>
 <audio id="lastBgm" src="last.mp3" loop></audio>
 
 <script>
 const ROWS=9,COLS=9,ENEMIES=10;
 let board=[],opened=[],flags=[],gameOver=false;
-let usedFlag=false;
-let lastMode=false;
+let usedFlag=false,lastMode=false;
 
 const game=document.getElementById("game");
 const explorer=document.getElementById("explorer");
 const status=document.getElementById("status");
+const bgmToggle=document.getElementById("bgmToggle");
 
 const bgm=document.getElementById("bgm");
 const lastBgm=document.getElementById("lastBgm");
@@ -193,7 +209,7 @@ function play(se){se.currentTime=0;se.play().catch(()=>{});}
 
 document.getElementById("restart").onclick=init;
 
-document.getElementById("bgmToggle").onclick=()=>{
+bgmToggle.onclick=()=>{
   if(bgm.paused && lastBgm.paused){
     bgm.play().catch(()=>{});
     bgmToggle.textContent="BGM OFF";
@@ -216,9 +232,7 @@ function init(){
   board=Array.from({length:ROWS},()=>Array(COLS).fill(0));
   opened=Array.from({length:ROWS},()=>Array(COLS).fill(false));
   flags=Array.from({length:ROWS},()=>Array(COLS).fill(false));
-  gameOver=false;
-  usedFlag=false;
-  lastMode=false;
+  gameOver=false;usedFlag=false;lastMode=false;
 
   bgm.pause();lastBgm.pause();
   game.classList.remove("last-dark");
@@ -270,13 +284,7 @@ function draw(){
         td.textContent="🚩";
       }
 
-      td.onclick=()=>{
-        if(!gameOver&&!flags[r][c]){
-          openCell(r,c);
-          draw();
-        }
-      };
-
+      td.onclick=()=>{if(!gameOver&&!flags[r][c]){openCell(r,c);draw();}};
       td.oncontextmenu=e=>{
         e.preventDefault();
         if(!opened[r][c]&&!gameOver){
