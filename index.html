@@ -23,7 +23,6 @@ body{
 /* ===== PC ===== */
 @media(min-width:768px){
   #container{
-    flex-direction:row;
     justify-content:center;
     align-items:center;
     gap:32px;
@@ -47,7 +46,6 @@ body{
   position:relative;
   transition:filter .5s;
 }
-
 #game.last-dark{filter:brightness(0.7);}
 
 table{border-collapse:collapse;}
@@ -92,13 +90,13 @@ td.enemy{
   text-align:center;
   border-radius:8px;
 }
-
 @media(min-width:768px){#side{width:300px;}}
 @media(max-width:767px){#side{width:100%;}}
 
 #explorer{
   width:min(260px,80vw);
   transition:.4s;
+  cursor:default;
 }
 @media(min-width:768px){#explorer{width:320px;}}
 
@@ -106,6 +104,7 @@ td.enemy{
   border:6px solid gold;
   border-radius:14px;
   box-shadow:0 0 30px gold;
+  cursor:pointer;
 }
 
 #explorer.captured{
@@ -117,7 +116,6 @@ td.enemy{
   font-size:18px;
   font-weight:bold;
 }
-
 #status.clear{
   color:gold;
   text-shadow:0 0 8px gold;
@@ -131,6 +129,25 @@ button{
   border:none;
   color:white;
   cursor:pointer;
+}
+
+/* ===== PERFECT 拡大表示 ===== */
+#zoomOverlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.85);
+  display:none;
+  justify-content:center;
+  align-items:center;
+  z-index:9999;
+}
+
+#zoomOverlay img{
+  max-width:90vw;
+  max-height:90vh;
+  border:8px solid gold;
+  border-radius:16px;
+  box-shadow:0 0 40px gold;
 }
 
 /* ===== Board Message ===== */
@@ -177,6 +194,11 @@ button{
   </div>
 </div>
 
+<!-- PERFECT 拡大用 -->
+<div id="zoomOverlay">
+  <img id="zoomImage">
+</div>
+
 <!-- AUDIO -->
 <audio id="seOpen" src="open.mp3"></audio>
 <audio id="seFlag" src="flag.mp3"></audio>
@@ -195,6 +217,9 @@ const game=document.getElementById("game");
 const explorer=document.getElementById("explorer");
 const status=document.getElementById("status");
 const bgmToggle=document.getElementById("bgmToggle");
+
+const zoomOverlay=document.getElementById("zoomOverlay");
+const zoomImage=document.getElementById("zoomImage");
 
 const bgm=document.getElementById("bgm");
 const lastBgm=document.getElementById("lastBgm");
@@ -228,6 +253,16 @@ function startBGM(){
 document.body.addEventListener("click",startBGM,{once:true});
 document.body.addEventListener("touchstart",startBGM,{once:true});
 
+/* ===== PERFECT 拡大処理 ===== */
+explorer.onclick=()=>{
+  if(!explorer.classList.contains("perfect"))return;
+  zoomImage.src=explorer.src;
+  zoomOverlay.style.display="flex";
+};
+zoomOverlay.onclick=()=>{
+  zoomOverlay.style.display="none";
+};
+
 function init(){
   board=Array.from({length:ROWS},()=>Array(COLS).fill(0));
   opened=Array.from({length:ROWS},()=>Array(COLS).fill(false));
@@ -241,6 +276,7 @@ function init(){
   explorer.className="";
   status.textContent="探検開始！";
   status.className="";
+  zoomOverlay.style.display="none";
 
   const msg=document.getElementById("boardMessage");
   if(msg)msg.remove();
@@ -266,7 +302,6 @@ function init(){
 function draw(){
   game.innerHTML="";
   const table=document.createElement("table");
-
   for(let r=0;r<ROWS;r++){
     const tr=document.createElement("tr");
     for(let c=0;c<COLS;c++){
